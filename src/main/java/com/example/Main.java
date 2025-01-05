@@ -1,50 +1,39 @@
 package com.example;
 
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.mime.MultipartEntityBuilder;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
-import org.apache.http.util.EntityUtils;
+import com.example.config.ConfigLoader;
+import com.example.telegram.TelegramApiClient;
+import com.example.utils.FileValidator;
 
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
-
-
+import java.io.Console;
+import java.io.File;
 
 public class Main {
     public static void main(String[] args) {
-        String token = "";
-        String url = "https://api.telegram.org/bot" + token + "/createNewStickerSet";
+        ConfigLoader config = new ConfigLoader();
+        TelegramApiClient apiClient = new TelegramApiClient(config.getBotToken());
 
-        try (CloseableHttpClient client = HttpClients.createDefault()) {
-            HttpPost post = new HttpPost(url);
+        Console console = System.console();
+        if (console == null) {
+            System.err.println("No console available");
+            return;
+        }
 
-            MultipartEntityBuilder builder = MultipartEntityBuilder.create();
-            builder.addTextBody("user_id", "385056286", org.apache.http.entity.ContentType.create("text/plain", StandardCharsets.UTF_8));
-            builder.addTextBody("name", "fizicatest2_by_stickers_nw_bot", org.apache.http.entity.ContentType.create("text/plain", StandardCharsets.UTF_8));
-            builder.addTextBody("title", "TestStickerPack", org.apache.http.entity.ContentType.create("text/plain", StandardCharsets.UTF_8));
-            builder.addTextBody("emojis", "🎈", org.apache.http.entity.ContentType.create("text/plain", StandardCharsets.UTF_8));
-
-            InputStream inputStream = Main.class.getResourceAsStream("/test.png");
-            if (inputStream == null) {
-                throw new RuntimeException("File not found: test.png");
+        String filePath;
+        do {
+            filePath = console.readLine("Enter path to sticker file: ");
+            if (!FileValidator.isValidFile(filePath)) {
+                console.printf("Invalid file path. Please enter again: %n");
             }
-            builder.addBinaryBody("png_sticker", inputStream, org.apache.http.entity.ContentType.create("image/png"), "test.png");
+        } while (!FileValidator.isValidFile(filePath));
 
-            HttpEntity entity = builder.build();
-            post.setEntity(entity);
+        String stickerPackName = console.readLine("Enter sticker pack name: ");
+        String stickerPackTitle = console.readLine("Enter sticker pack title: ");
 
-            HttpResponse response = client.execute(post);
-            HttpEntity responseEntity = response.getEntity();
-
-            if (responseEntity != null) {
-                String result = EntityUtils.toString(responseEntity);
-                System.out.println(result);
-            }
+        File stickerFile = new File(filePath);
+        try {
+            apiClient.createStickerSet(config.getUserId(), stickerPackName, config.getBotName(), stickerPackTitle, "🎈", stickerFile);
         } catch (Exception e) {
-            e.printStackTrace();
+            System.err.println("Error creating sticker pack: " + e.getMessage());
         }
     }
 }
