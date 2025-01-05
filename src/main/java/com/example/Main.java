@@ -6,6 +6,9 @@ import com.example.utils.FileValidator;
 
 import java.io.Console;
 import java.io.File;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Objects;
 
 public class Main {
     public static void main(String[] args) {
@@ -18,40 +21,44 @@ public class Main {
             return;
         }
 
-        // Step 1: Create Sticker Pack
-        String filePath;
+        String directoryPath;
         do {
-            filePath = console.readLine("Enter path to sticker file: ");
-            if (!FileValidator.isValidFile(filePath)) {
-                console.printf("Invalid file path. Please enter again: %n");
+            directoryPath = console.readLine("Enter path to the directory containing stickers: ");
+            if (!FileValidator.isValidDirectory(directoryPath)) {
+                console.printf("Invalid directory path. Please enter again: %n");
             }
-        } while (!FileValidator.isValidFile(filePath));
+        } while (!FileValidator.isValidDirectory(directoryPath));
 
         String stickerPackName = console.readLine("Enter sticker pack name: ");
         String stickerPackTitle = console.readLine("Enter sticker pack title: ");
 
-        File stickerFile = new File(filePath);
-        try {
-            String botName = config.getBotName();
-            apiClient.createStickerSet(config.getUserId(), stickerPackName, botName, stickerPackTitle, "🎈", stickerFile);
-        } catch (Exception e) {
-            System.err.println("Error creating sticker pack: " + e.getMessage());
+        File directory = new File(directoryPath);
+        List<File> stickerFiles = Arrays.asList(Objects.requireNonNull(directory.listFiles(FileValidator::isValidImageFile)));
+        if (stickerFiles.isEmpty()) {
+            System.err.println("No valid image files found in the directory.");
             return;
         }
 
-        // Step 2: Add Another Sticker
-        do {
-            filePath = console.readLine("Enter path to another sticker file: ");
-            if (!FileValidator.isValidFile(filePath)) {
-                console.printf("Invalid file path. Please enter again: %n");
-            }
-        } while (!FileValidator.isValidFile(filePath));
+        List<String> emojis = Arrays.asList("🎈", "🎉", "🎊", "🎁", "✨", "🌟", "🔥", "⚡", "🌈", "☀️");
 
-        File additionalStickerFile = new File(filePath);
         try {
-            apiClient.addStickerToSet(config.getUserId(), stickerPackName + "_by_" + config.getBotName(), "🔥", additionalStickerFile);
+            File firstSticker = stickerFiles.get(0);
+            apiClient.createStickerSet(
+                    config.getUserId(),
+                    stickerPackName,
+                    config.getBotName(),
+                    stickerPackTitle,
+                    emojis.get(0),
+                    firstSticker
+            );
+
+            for (int i = 1; i < stickerFiles.size(); i++) {
+                File sticker = stickerFiles.get(i);
+                String emoji = emojis.get(i % emojis.size());
+                apiClient.addStickerToSet(config.getUserId(), stickerPackName, config.getBotName(), emoji, sticker);
+            }
         } catch (Exception e) {
-            System.err.println("Error adding sticker to pack: " + e.getMessage());
+            System.err.println("Error processing stickers: " + e.getMessage());
         }
     }
 }

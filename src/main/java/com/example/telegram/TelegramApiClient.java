@@ -26,9 +26,9 @@ public class TelegramApiClient {
         sendRequest(url, builder);
     }
 
-    public void addStickerToSet(String userId, String name, String emoji, File stickerFile) throws Exception {
+    public void addStickerToSet(String userId, String name, String botName, String emoji, File stickerFile) throws Exception {
         String url = "https://api.telegram.org/bot" + botToken + "/addStickerToSet";
-        MultipartEntityBuilder builder = buildBaseRequest(userId, name, emoji, stickerFile);
+        MultipartEntityBuilder builder = buildBaseRequest(userId, name + "_by_" + botName, emoji, stickerFile);
         sendRequest(url, builder);
     }
 
