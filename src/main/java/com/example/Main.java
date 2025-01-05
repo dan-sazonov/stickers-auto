@@ -2,6 +2,7 @@ package com.example;
 
 import com.example.config.ConfigLoader;
 import com.example.telegram.TelegramApiClient;
+import com.example.utils.EmojiExtractor;
 import com.example.utils.FileValidator;
 
 import java.io.Console;
@@ -39,23 +40,33 @@ public class Main {
             return;
         }
 
-        List<String> emojis = Arrays.asList("🎈", "🎉", "🎊", "🎁", "✨", "🌟", "🔥", "⚡", "🌈", "☀️");
-
         try {
-            File firstSticker = stickerFiles.get(0);
-            apiClient.createStickerSet(
-                    config.getUserId(),
-                    stickerPackName,
-                    config.getBotName(),
-                    stickerPackTitle,
-                    emojis.get(0),
-                    firstSticker
-            );
+            boolean stickerPackCreated = false;
 
-            for (int i = 1; i < stickerFiles.size(); i++) {
-                File sticker = stickerFiles.get(i);
-                String emoji = emojis.get(i % emojis.size());
-                apiClient.addStickerToSet(config.getUserId(), stickerPackName, config.getBotName(), emoji, sticker);
+            for (File sticker : stickerFiles) {
+                String emojis = EmojiExtractor.extractEmojisFromFileName(sticker.getName());
+                if (emojis.isEmpty()) {
+                    System.out.println("Skipping file without emojis: " + sticker.getName());
+                    continue;
+                }
+
+                if (!stickerPackCreated) {
+                    apiClient.createStickerSet(
+                            config.getUserId(),
+                            stickerPackName,
+                            config.getBotName(),
+                            stickerPackTitle,
+                            emojis,
+                            sticker
+                    );
+                    stickerPackCreated = true;
+                } else {
+                    apiClient.addStickerToSet(config.getUserId(), stickerPackName, config.getBotName(), emojis, sticker);
+                }
+            }
+
+            if (!stickerPackCreated) {
+                System.err.println("No valid stickers with emojis found. Sticker pack was not created.");
             }
         } catch (Exception e) {
             System.err.println("Error processing stickers: " + e.getMessage());

@@ -12,6 +12,7 @@ public class FileValidator {
 
     public static boolean isValidImageFile(File file) {
         String[] validExtensions = {".png", ".jpg", ".jpeg"};
-        return file.isFile() && Arrays.stream(validExtensions).anyMatch(file.getName().toLowerCase()::endsWith);
+        return file.isFile() && Arrays.stream(validExtensions).anyMatch(file.getName().toLowerCase()::endsWith)
+                && !EmojiExtractor.extractEmojisFromFileName(file.getName()).isEmpty();
     }
 }
