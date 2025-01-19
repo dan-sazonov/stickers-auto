@@ -2,14 +2,12 @@ package com.example;
 
 import com.example.config.ConfigLoader;
 import com.example.telegram.TelegramApiClient;
-import com.example.utils.EmojiExtractor;
 import com.example.utils.FileValidator;
+import com.example.utils.EmojiExtractor;
 
 import java.io.Console;
 import java.io.File;
-import java.util.Arrays;
 import java.util.List;
-import java.util.Objects;
 
 public class Main {
     public static void main(String[] args) {
@@ -22,54 +20,74 @@ public class Main {
             return;
         }
 
-        String directoryPath;
+        String mode = console.readLine("Select mode: [1] Create sticker pack, [2] Update sticker pack: ");
+        if ("1".equals(mode)) {
+            handleCreateStickerPack(console, apiClient, config);
+        } else if ("2".equals(mode)) {
+            handleUpdateStickerPack(console, apiClient, config);
+        } else {
+            System.out.println("Invalid mode selected.");
+        }
+    }
+
+    private static void handleCreateStickerPack(Console console, TelegramApiClient apiClient, ConfigLoader config) {
+        String dirPath;
         do {
-            directoryPath = console.readLine("Enter path to the directory containing stickers: ");
-            if (!FileValidator.isValidDirectory(directoryPath)) {
-                console.printf("Invalid directory path. Please enter again: %n");
+            dirPath = console.readLine("Enter path to directory with stickers: ");
+            if (!FileValidator.isValidDirectory(dirPath)) {
+                console.printf("Invalid directory path. Please enter again.%n");
             }
-        } while (!FileValidator.isValidDirectory(directoryPath));
+        } while (!FileValidator.isValidDirectory(dirPath));
 
         String stickerPackName = console.readLine("Enter sticker pack name: ");
         String stickerPackTitle = console.readLine("Enter sticker pack title: ");
 
-        File directory = new File(directoryPath);
-        List<File> stickerFiles = Arrays.asList(Objects.requireNonNull(directory.listFiles(FileValidator::isValidImageFile)));
-        if (stickerFiles.isEmpty()) {
-            System.err.println("No valid image files found in the directory.");
+        List<File> validFiles = FileValidator.getValidImageFiles(dirPath);
+        if (validFiles.isEmpty()) {
+            System.out.println("No valid sticker files found in the directory.");
             return;
         }
 
         try {
-            boolean stickerPackCreated = false;
+            apiClient.createStickerSet(config.getUserId(), stickerPackName, config.getBotName(), stickerPackTitle,
+                    EmojiExtractor.extractEmojisFromFileName(validFiles.get(0).getName()), validFiles.get(0));
 
-            for (File sticker : stickerFiles) {
-                String emojis = EmojiExtractor.extractEmojisFromFileName(sticker.getName());
-                if (emojis.isEmpty()) {
-                    System.out.println("Skipping file without emojis: " + sticker.getName());
-                    continue;
-                }
-
-                if (!stickerPackCreated) {
-                    apiClient.createStickerSet(
-                            config.getUserId(),
-                            stickerPackName,
-                            config.getBotName(),
-                            stickerPackTitle,
-                            emojis,
-                            sticker
-                    );
-                    stickerPackCreated = true;
-                } else {
-                    apiClient.addStickerToSet(config.getUserId(), stickerPackName, config.getBotName(), emojis, sticker);
-                }
+            for (int i = 1; i < validFiles.size(); i++) {
+                File file = validFiles.get(i);
+                String emojis = EmojiExtractor.extractEmojisFromFileName(file.getName());
+                apiClient.addStickerToSet(config.getUserId(), stickerPackName, config.getBotName(), emojis, file);
             }
-
-            if (!stickerPackCreated) {
-                System.err.println("No valid stickers with emojis found. Sticker pack was not created.");
-            }
+            System.out.println("Sticker pack created successfully!");
         } catch (Exception e) {
-            System.err.println("Error processing stickers: " + e.getMessage());
+            System.err.println("Error creating sticker pack: " + e.getMessage());
+        }
+    }
+
+    private static void handleUpdateStickerPack(Console console, TelegramApiClient apiClient, ConfigLoader config) {
+        String dirPath;
+        do {
+            dirPath = console.readLine("Enter path to directory with stickers: ");
+            if (!FileValidator.isValidDirectory(dirPath)) {
+                console.printf("Invalid directory path. Please enter again.%n");
+            }
+        } while (!FileValidator.isValidDirectory(dirPath));
+
+        String stickerPackName = console.readLine("Enter sticker pack name to update: ");
+
+        List<File> validFiles = FileValidator.getValidImageFiles(dirPath);
+        if (validFiles.isEmpty()) {
+            System.out.println("No valid sticker files found in the directory.");
+            return;
+        }
+
+        try {
+            for (File file : validFiles) {
+                String emojis = EmojiExtractor.extractEmojisFromFileName(file.getName());
+                apiClient.addStickerToSet(config.getUserId(), stickerPackName, config.getBotName(), emojis, file);
+            }
+            System.out.println("Sticker pack updated successfully!");
+        } catch (Exception e) {
+            System.err.println("Error updating sticker pack: " + e.getMessage());
         }
     }
 }

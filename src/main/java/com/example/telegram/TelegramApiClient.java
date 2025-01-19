@@ -1,6 +1,6 @@
 package com.example.telegram;
 
-import org.apache.http.HttpEntity;
+import com.vdurmont.emoji.EmojiParser;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.mime.MultipartEntityBuilder;
@@ -19,39 +19,54 @@ public class TelegramApiClient {
         this.botToken = botToken;
     }
 
+    /**
+     * Creates a new sticker pack.
+     */
     public void createStickerSet(String userId, String name, String botName, String title, String emoji, File stickerFile) throws Exception {
         String url = "https://api.telegram.org/bot" + botToken + "/createNewStickerSet";
-        MultipartEntityBuilder builder = buildBaseRequest(userId, name + "_by_" + botName, emoji, stickerFile);
+        MultipartEntityBuilder builder = prepareStickerRequest(userId, name + "_by_" + botName, emoji, stickerFile);
         builder.addTextBody("title", title, org.apache.http.entity.ContentType.create("text/plain", StandardCharsets.UTF_8));
-        sendRequest(url, builder);
+        sendRequest(url, builder, "Sticker pack created successfully with the first sticker: ", emoji);
     }
 
+    /**
+     * Adds a sticker to an existing sticker pack.
+     */
     public void addStickerToSet(String userId, String name, String botName, String emoji, File stickerFile) throws Exception {
         String url = "https://api.telegram.org/bot" + botToken + "/addStickerToSet";
-        MultipartEntityBuilder builder = buildBaseRequest(userId, name + "_by_" + botName, emoji, stickerFile);
-        sendRequest(url, builder);
+        MultipartEntityBuilder builder = prepareStickerRequest(userId, name + "_by_" + botName, emoji, stickerFile);
+        sendRequest(url, builder, "Sticker added successfully: ", emoji);
     }
 
-    private MultipartEntityBuilder buildBaseRequest(String userId, String name, String emoji, File stickerFile) throws Exception {
+    /**
+     * Prepares the common part of the sticker request.
+     */
+    private MultipartEntityBuilder prepareStickerRequest(String userId, String name, String emoji, File stickerFile) throws Exception {
         MultipartEntityBuilder builder = MultipartEntityBuilder.create();
         builder.addTextBody("user_id", userId, org.apache.http.entity.ContentType.create("text/plain", StandardCharsets.UTF_8));
         builder.addTextBody("name", name, org.apache.http.entity.ContentType.create("text/plain", StandardCharsets.UTF_8));
         builder.addTextBody("emojis", emoji, org.apache.http.entity.ContentType.create("text/plain", StandardCharsets.UTF_8));
-        builder.addBinaryBody("png_sticker", new FileInputStream(stickerFile), org.apache.http.entity.ContentType.create("image/png"), stickerFile.getName());
+        builder.addBinaryBody("png_sticker", new FileInputStream(stickerFile),
+                org.apache.http.entity.ContentType.create("image/png"), stickerFile.getName());
         return builder;
     }
 
-    private void sendRequest(String url, MultipartEntityBuilder builder) throws Exception {
+    /**
+     * Sends an HTTP POST request and processes the response.
+     */
+    private void sendRequest(String url, MultipartEntityBuilder builder, String successMessage, String emoji) throws Exception {
         try (CloseableHttpClient client = HttpClients.createDefault()) {
             HttpPost post = new HttpPost(url);
             post.setEntity(builder.build());
 
             HttpResponse response = client.execute(post);
-            HttpEntity responseEntity = response.getEntity();
+            String result = EntityUtils.toString(response.getEntity());
 
-            if (responseEntity != null) {
-                String result = EntityUtils.toString(responseEntity);
-                System.out.println(result);
+            if (result.contains("\"ok\":true")) {
+                String emojiName = EmojiParser.parseToAliases(emoji);
+                System.out.println(successMessage + emojiName);
+            } else {
+                System.err.println("Error: " + result);
             }
         }
     }
