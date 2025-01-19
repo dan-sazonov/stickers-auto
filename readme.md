@@ -48,26 +48,46 @@ Run the application using the following command:
 ./gradlew run --console=plain --quiet
 ```
 
-During execution:
+During execution, you will be prompted to choose a mode of operation:
 
-1. Enter the path to the directory containing the sticker files.
-2. Provide the sticker pack name and title.
+1. **Create a new sticker pack**:
+   - Enter the path to the directory containing the sticker files.
+   - Provide the sticker pack name and title.
+   - The program will automatically:
+      - Extract emojis from file names.
+      - Skip files without emojis.
+      - Create the sticker pack and add all valid stickers.
 
-The program will automatically:
+2. **Update an existing sticker pack**:
+   - Enter the path to the directory containing the new stickers.
+   - Provide the name of the existing sticker pack.
+   - The program will automatically:
+      - Extract emojis from file names.
+      - Skip files without emojis.
+      - Add all valid stickers to the specified sticker pack.
 
-- Extract emojis from file names.
-- Skip files without emojis.
-- Create the sticker pack and add all valid stickers.
+Example input/output for **Create a new sticker pack**:
 
-Example input/output:
 ```
-Enter path to the directory containing stickers: /path/to/stickers
-Enter sticker pack name: my_new_pack
-Enter sticker pack title: My Awesome Stickers
-{"ok":true,"result":true}
-{"ok":true,"result":true}
-{"ok":true,"result":true}
-{"ok":true,"result":true}
+> Select mode: [1] Create sticker pack, [2] Update sticker pack: 1
+> Enter path to the directory containing stickers: /path/to/stickers
+> Enter sticker pack name: my_new_pack
+> Enter sticker pack title: My Awesome Stickers
+Sticker pack created successfully with the first sticker: :smile:
+Sticker added successfully: :heart:
+Sticker added successfully: :star:
+Sticker added successfully: :rocket:
+```
+
+Example input/output for **Update an existing sticker pack**:
+
+```
+> Select mode: [1] Create sticker pack, [2] Update sticker pack: 2
+> Enter path to directory with stickers: /path/to/new_stickers
+> Enter sticker pack name to update: my_existing_pack
+Sticker added successfully: :fire:
+Sticker added successfully: :sunny:
+Sticker added successfully: :moon:
 ```
 
 ## 🔬Sources
